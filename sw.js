@@ -1,13 +1,13 @@
 const CACHE_NAME = 'health-directory-cache-v1';
 const urlsToCache = [
   'https://ahmedsharyph.github.io/sh-health-dir/',
-  './index.html',
-  './manifest.json',
-  './icon-192x192.png',
-  './icon-512x512.png',
-  './logo.png',
+  'https://ahmedsharyph.github.io/sh-health-dir/index.html',
+  'https://ahmedsharyph.github.io/sh-health-dir/manifest.json',
+  'https://ahmedsharyph.github.io/sh-health-dir/icon-192x192.png',
+  'https://ahmedsharyph.github.io/sh-health-dir/icon-512x512.png',
+  'https://ahmedsharyph.github.io/sh-health-dir/logo.png',
   'https://cdn.tailwindcss.com',
-  './app.js'
+  'https://ahmedsharyph.github.io/sh-health-dir/app.js'
 ];
 
 self.addEventListener('install', event => {

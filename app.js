@@ -111,4 +111,54 @@ function filterData() {
     if(match) anyVisible=true;
   });
 
-  document.querySelectorAll('section.center-group').
+  document.querySelectorAll('section.center-group').forEach(section => {
+    const visibleRows = section.querySelectorAll('tbody tr:not([style*="display: none"])');
+    section.style.display = visibleRows.length ? '' : 'none';
+  });
+
+  if(!anyVisible && !document.querySelector('.no-results-message')){
+    const msg=document.createElement('p');
+    msg.className='no-results no-results-message';
+    msg.textContent='No matching contacts found.';
+    document.getElementById('directoryContainer').appendChild(msg);
+  } else if(anyVisible){ document.querySelector('.no-results-message')?.remove(); }
+}
+
+function enableSorting() {
+  document.querySelectorAll('table.sortable-table').forEach(table => {
+    const headers = table.querySelectorAll('thead th');
+    headers.forEach(th => {
+      th.addEventListener('click', () => {
+        const colIndex=parseInt(th.dataset.col);
+        const tbody=table.querySelector('tbody');
+        const rowsArray=Array.from(tbody.querySelectorAll('tr'));
+        let currentSort=th.dataset.sort||'none';
+        headers.forEach(h=>{if(h!==th){h.dataset.sort='none';h.querySelector('.sort-arrow').textContent='';}});
+        let newSort=(currentSort==='none'||currentSort==='desc')?'asc':'desc';
+        th.dataset.sort=newSort;
+        th.querySelector('.sort-arrow').textContent=newSort==='asc'?'▲':'▼';
+
+        rowsArray.sort((a,b)=>{
+          let aText=a.children[colIndex].textContent.trim().toLowerCase();
+          let bText=b.children[colIndex].textContent.trim().toLowerCase();
+          if(colIndex===0){ aText=aText.replace(/\D/g,'')||'0'; bText=bText.replace(/\D/g,'')||'0'; return newSort==='asc'?aText.localeCompare(bText,{numeric:true}):bText.localeCompare(aText,{numeric:true}); }
+          return newSort==='asc'?(aText<bText?-1:1):(bText<aText?-1:1);
+        });
+
+        rowsArray.forEach(r=>tbody.appendChild(r));
+      });
+    });
+  });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('searchInput').addEventListener('input', filterData);
+});
+window.onload = loadData;
+
+// Register Service Worker
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('./sw.js')
+  .then(()=>console.log('Service Worker registered'))
+  .catch(err=>console.error('Service Worker registration failed:',err));
+}

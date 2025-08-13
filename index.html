@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Shaviyani Health Directory</title>
 
-  <!-- Meta for PWA -->
+  <!-- PWA Meta -->
   <meta name="theme-color" content="#059669" />
   <meta name="description" content="Shaviyani Health Directory - Access contacts offline." />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -13,32 +13,20 @@
   <meta name="apple-mobile-web-app-title" content="HealthDir" />
   <meta name="mobile-web-app-capable" content="yes" />
 
-  <!-- Icons for PWA -->
+  <!-- Icons -->
   <link rel="apple-touch-icon" href="./icon-192x192.png" />
   <link rel="icon" type="image/png" href="./icon-192x192.png" />
   <link rel="manifest" href="./manifest.json" />
 
-  <!-- Tailwind CSS CDN -->
+  <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
 
-  <!-- Inline Styles -->
   <style>
-    body {
-      font-family: 'Roboto', sans-serif;
-      -webkit-font-smoothing: antialiased;
-    }
-    h2 {
-      @apply text-lg font-semibold text-gray-800 mt-6;
-    }
-    .sortable-table th {
-      @apply cursor-pointer hover:bg-emerald-700 transition;
-    }
-    .no-results {
-      @apply text-center py-4 text-gray-500;
-    }
-    .install-btn {
-      @apply fixed bottom-4 right-4 bg-emerald-600 text-white px-5 py-2 rounded-full shadow-lg z-50 hover:bg-emerald-700 transition;
-    }
+    body { font-family: 'Roboto', sans-serif; -webkit-font-smoothing: antialiased; }
+    h2 { @apply text-lg font-semibold text-gray-800 mt-6; }
+    .sortable-table th { @apply cursor-pointer hover:bg-emerald-700 transition; }
+    .no-results { @apply text-center py-4 text-gray-500; }
+    .install-btn { @apply fixed bottom-4 right-4 bg-emerald-600 text-white px-5 py-2 rounded-full shadow-lg z-50 hover:bg-emerald-700 transition; }
   </style>
 </head>
 <body class="bg-gray-100 pt-16">
@@ -60,9 +48,7 @@
         class="w-full border border-gray-300 rounded px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-600"
       />
     </form>
-    <button id="hamburgerBtn" class="text-2xl lg:hidden" aria-label="Toggle navigation" aria-expanded="false">
-      &#9776;
-    </button>
+    <button id="hamburgerBtn" class="text-2xl lg:hidden" aria-label="Toggle navigation" aria-expanded="false">&#9776;</button>
   </div>
 </nav>
 
@@ -71,227 +57,11 @@
   <p class="no-results">Loading data…</p>
 </main>
 
-<!-- Install Button (shown only when prompt is available) -->
+<!-- Install Button -->
 <button id="installButton" class="hidden install-btn">Install App</button>
 
-<!-- Service Worker Registration & Install Logic -->
-<script>
-  let deferredPrompt;
+<!-- Scripts -->
+<script src="./app.js"></script>
 
-  // Show install button when install is possible
-  window.addEventListener('beforeinstallprompt', (e) => {
-    e.preventDefault();
-    deferredPrompt = e;
-    document.getElementById('installButton').classList.remove('hidden');
-  });
-
-  // Install button click
-  document.getElementById('installButton').addEventListener('click', () => {
-    if (deferredPrompt) {
-      deferredPrompt.prompt();
-      deferredPrompt.userChoice.then((choiceResult) => {
-        if (choiceResult.outcome === 'accepted') {
-          console.log('User accepted the install prompt');
-        }
-        deferredPrompt = null;
-        document.getElementById('installButton').classList.add('hidden');
-      });
-    }
-  });
-
-  // Hamburger toggle
-  const hamburgerBtn = document.getElementById('hamburgerBtn');
-  const navbarNav = document.createElement('div');
-  navbarNav.id = 'navbarNav';
-  navbarNav.className = 'hidden lg:flex lg:items-center lg:space-x-4 flex-col lg:flex-row';
-  navbarNav.innerHTML = `
-    <a href="add-contact.html" class="block px-4 py-2 text-sm font-medium hover:text-emerald-700">Add Contact</a>
-  `;
-  document.querySelector('nav > div').appendChild(navbarNav);
-
-  hamburgerBtn.addEventListener('click', () => {
-    const expanded = hamburgerBtn.getAttribute('aria-expanded') === 'true';
-    hamburgerBtn.setAttribute('aria-expanded', !expanded);
-    navbarNav.classList.toggle('hidden');
-  });
-</script>
-
-<!-- Data Loading & Table Logic -->
-<script>
-  const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbwndImcPMsQCTx1xLtxolE7Q7nOdN_nVpmOh7fw0U0Sy0-0u30Chp6ovUVhJgk2XdRuNg/exec';
-
-  function normalize(str) {
-    return (str || '').toString().toLowerCase().replace(/\s+/g, ' ').trim();
-  }
-
-  let allRows = [];
-
-  async function loadData() {
-    const container = document.getElementById('directoryContainer');
-    try {
-      const res = await fetch(WEB_APP_URL);
-      if (!res.ok) throw new Error(`HTTP error ${res.status}`);
-
-      const data = await res.json();
-
-      if (!Array.isArray(data) || data.length === 0) {
-        container.innerHTML = '<p class="no-results">No data found.</p>';
-        return;
-      }
-
-      container.innerHTML = '';
-
-      const grouped = {};
-      data.forEach(item => {
-        const center = String(item['Health Center'] || 'Unknown').trim();
-        if (!grouped[center]) grouped[center] = [];
-        grouped[center].push(item);
-      });
-
-      for (const center in grouped) {
-        const section = document.createElement('section');
-        section.className = 'center-group';
-        section.dataset.center = center.toLowerCase();
-
-        const rowsHtml = grouped[center].map(person => {
-          const fullName = String(person['Assigned To'] || '').trim();
-          const role = String(person['Role  or Function'] || '').trim();
-          const dept = String(person['Department'] || '').trim();
-          const phoneRaw = person['Contact Number'] || '';
-          const phone = String(phoneRaw).trim();
-          const searchText = normalize(`${center} ${fullName} ${role} ${dept} ${phone}`);
-
-          return `
-            <tr class="data-row" data-search="${searchText}">
-              <td class="px-4 py-2"><a href="tel:${phone}" class="text-emerald-600">📞 ${phone}</a></td>
-              <td class="px-4 py-2">${dept}</td>
-              <td class="px-4 py-2">${fullName}</td>
-              <td class="px-4 py-2">${role}</td>
-            </tr>`;
-        }).join('');
-
-        section.innerHTML = `
-          <h2>${center}</h2>
-          <div class="overflow-x-auto bg-white rounded shadow mb-6">
-            <table class="min-w-full border-collapse sortable-table">
-              <thead class="bg-emerald-600 text-white">
-                <tr>
-                  <th class="px-4 py-2" data-col="0">Phone <span class="sort-arrow"></span></th>
-                  <th class="px-4 py-2" data-col="1">Department <span class="sort-arrow"></span></th>
-                  <th class="px-4 py-2" data-col="2">Assignee <span class="sort-arrow"></span></th>
-                  <th class="px-4 py-2" data-col="3">Role <span class="sort-arrow"></span></th>
-                </tr>
-              </thead>
-              <tbody>
-                ${rowsHtml}
-              </tbody>
-            </table>
-          </div>
-        `;
-
-        container.appendChild(section);
-      }
-
-      allRows = Array.from(document.querySelectorAll('.data-row'));
-      enableSorting();
-
-    } catch (error) {
-      container.innerHTML = `<p class="no-results">Failed to load data: ${error.message}</p>`;
-      console.error(error);
-    }
-  }
-
-  function filterData() {
-    const term = normalize(document.getElementById('searchInput').value);
-    if (!term) {
-      allRows.forEach(row => (row.style.display = ''));
-      document.querySelectorAll('section.center-group').forEach(s => (s.style.display = ''));
-      const msg = document.querySelector('.no-results-message');
-      if (msg) msg.remove();
-      return;
-    }
-
-    let anyVisible = false;
-    allRows.forEach(row => {
-      const match = row.dataset.search.includes(term);
-      row.style.display = match ? '' : 'none';
-      if (match) anyVisible = true;
-    });
-
-    document.querySelectorAll('section.center-group').forEach(section => {
-      const visibleRows = section.querySelectorAll('tbody tr:not([style*="display: none"])');
-      section.style.display = visibleRows.length ? '' : 'none';
-    });
-
-    const container = document.getElementById('directoryContainer');
-    if (!anyVisible && !document.querySelector('.no-results-message')) {
-      const msg = document.createElement('p');
-      msg.className = 'no-results no-results-message';
-      msg.textContent = 'No matching contacts found.';
-      container.appendChild(msg);
-    } else if (anyVisible) {
-      const msg = document.querySelector('.no-results-message');
-      if (msg) msg.remove();
-    }
-  }
-
-  function enableSorting() {
-    const tables = document.querySelectorAll('table.sortable-table');
-    tables.forEach(table => {
-      const headers = table.querySelectorAll('thead th');
-      headers.forEach(th => {
-        th.addEventListener('click', () => {
-          const colIndex = parseInt(th.getAttribute('data-col'));
-          const tbody = table.querySelector('tbody');
-          const rowsArray = Array.from(tbody.querySelectorAll('tr'));
-
-          let currentSort = th.getAttribute('data-sort') || 'none';
-          headers.forEach(h => {
-            if (h !== th) {
-              h.setAttribute('data-sort', 'none');
-              h.querySelector('.sort-arrow').textContent = '';
-            }
-          });
-
-          let newSort = (currentSort === 'none' || currentSort === 'desc') ? 'asc' : 'desc';
-          th.setAttribute('data-sort', newSort);
-          th.querySelector('.sort-arrow').textContent = newSort === 'asc' ? '▲' : '▼';
-
-          rowsArray.sort((a, b) => {
-            let aText = a.children[colIndex].textContent.trim().toLowerCase();
-            let bText = b.children[colIndex].textContent.trim().toLowerCase();
-            if (colIndex === 0) {
-              aText = aText.replace(/\D/g, '') || '0';
-              bText = bText.replace(/\D/g, '') || '0';
-              return newSort === 'asc'
-                ? aText.localeCompare(bText, undefined, { numeric: true })
-                : bText.localeCompare(aText, undefined, { numeric: true });
-            }
-            return newSort === 'asc' ? (aText < bText ? -1 : 1) : (bText < aText ? -1 : 1);
-          });
-
-          rowsArray.forEach(row => tbody.appendChild(row));
-        });
-      });
-    });
-  }
-
-  document.addEventListener('DOMContentLoaded', () => {
-    document.getElementById('searchInput').addEventListener('input', filterData);
-  });
-
-  window.onload = loadData;
-</script>
-
-<!-- Register Service Worker -->
-<script>
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('./sw.js')
-        .then(reg => console.log('Service Worker registered'))
-        .catch(err => console.error('Service Worker registration failed:', err));
-    });
-  }
-</script>
 </body>
 </html>

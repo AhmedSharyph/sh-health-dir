@@ -1,6 +1,6 @@
 const CACHE_NAME = 'health-directory-cache-v1';
 const urlsToCache = [
-  './',
+  'https://ahmedsharyph.github.io/sh-health-dir/',
   './index.html',
   './manifest.json',
   './icon-192x192.png',
